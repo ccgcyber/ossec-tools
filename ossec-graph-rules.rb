@@ -37,13 +37,13 @@ if __FILE__ == $0 then
       :graphFormat => 'png',
    }
    OptionParser.new { |opts|
-     opts.banner = "Usage: #{File.basename($0)} -f -t filename <rule_file.xml>"
+     opts.banner = "Usage: #{File.basename($0)} [-f] [-t <filename>] <rule_file.xml>"
 
-     opts.on('-f', '--graph-filename FILENAME', 'Output file name for graph') do |arg|
+     opts.on('-f', '--graph-filename=FILENAME', 'Output file name for graph') do |arg|
       options[:graphFilename] = arg
      end
 
-     opts.on('-t', '--image-format FILENAME', 'File format of graph image. Examples: png, jpg. Default is png.') do |arg|
+     opts.on('-t', '--image-format=FORMAT', 'File format of graph image. Examples: png, jpg. Default is png.') do |arg|
        options[:graphFormat] = arg
      end
    }.parse!
