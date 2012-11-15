@@ -1,5 +1,4 @@
 #!/usr/bin/ruby
-require 'pp'
 require 'rubygems'
 require 'optparse'
 require 'rgl/dot'
@@ -208,7 +207,6 @@ if __FILE__ == $0 then
       constraints = getConstraints(graph, graphNodes)
       if options[:printConstraints] then
          outputConstraints(constraints, $stdout)
-         #pp constraints.sort
       end
       if options[:writeConstraints] then
          fdObj = File.new(options[:constraintsFilename], "w")
