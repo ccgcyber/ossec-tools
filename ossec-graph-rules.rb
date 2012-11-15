@@ -61,7 +61,7 @@ end
 
 def outputConstraints(constraints, fd)
    constraints.sort.to_a.each do |rule, constraints|
-      fd.write("Rule: #{rule}")
+      fd.write("Rule: #{rule}\n")
       constraints.each do |c|
          fd.write("\t")
          fd.write("(#{c['parent']}) ") if c['parent']
