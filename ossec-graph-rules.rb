@@ -1,9 +1,8 @@
 #!/usr/bin/ruby
 require 'rubygems'
 require 'optparse'
-require 'rgl/dot'
-require 'rgl/adjacency'
 require 'rexml/document'
+require 'rgl/adjacency'
 
 DontCare = 0
 SelfText = 1
@@ -194,6 +193,10 @@ if __FILE__ == $0 then
         opts.on('-F', '--constraints-filename=FILENAME', 'Filename to use for the textual representation of all rule constraints.') do |arg|
           options[:constraintsFilename] = arg
         end
+
+        opts.on('-v', '--verbose', 'Print extra stuff.') do
+          options[:verbose] = true
+        end
       }.parse!
    rescue OptionParser::MissingArgument => e
       puts e
@@ -207,8 +210,13 @@ if __FILE__ == $0 then
    end
 
    graph, graphNodes = getGraph(options[:inputFilenames])
-   graphic = writeGraphic(graph, format=options[:graphFormat], dotfile=options[:graphFilename]) if options[:writeGraphic]
-   puts "Wrote new graph: %s" % graphic if options[:writeGraphic]
+   if options[:writeGraphic] then
+      require 'rgl/dot'
+      graphic = writeGraphic(graph, format=options[:graphFormat], dotfile=options[:graphFilename]) if options[:writeGraphic]
+      if options[:verbose] then
+         puts "Wrote new graph: %s" % graphic if options[:writeGraphic]
+      end
+   end
 
    if options[:printConstraints] or options[:writeConstraints] then
       constraints = getConstraints(graph, graphNodes)
