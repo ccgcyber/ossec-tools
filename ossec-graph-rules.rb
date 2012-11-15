@@ -10,14 +10,6 @@ SelfText = 1
 ChildText = 2
 
 Constraints = {
-   "group" => DontCare,
-   "if_sid" => DontCare,
-   "if_matched_sid" => DontCare,
-   "description" => DontCare,
-   "info" => DontCare,
-   "category" => DontCare,
-   "options" => DontCare, #Make this => ChildText if you want to see non-constraint rule options
-
    "same_source_ip" => SelfText,
    "same_hostname" => SelfText,
 
@@ -34,6 +26,10 @@ Constraints = {
    "decoded_as" => ChildText,
    "extra_data" => ChildText,
    "list" => ChildText
+}
+FrequencyConstraints = {
+   "frequency" => nil,
+   "timeframe" => nil,
 }
 
 class NinjaDirectedAdjacencyGraph < RGL::DirectedAdjacencyGraph
@@ -72,8 +68,24 @@ def outputConstraints(constraints, fd)
    end
 end
 
+def addConstraint(name, options={})
+   {
+      "name" => name,
+      "value" => options[:value],
+      "operator" => options[:operator],
+      "parent" => options[:parent],
+   }
+end
+
 def getRuleConstraint(node, options={})
    constraints = []
+
+   node.attributes.each do |attr, value|
+      if FrequencyConstraints.include?(attr) then
+         constraints << addConstraint(attr, :value=>value, :operator=>'=')
+      end
+   end
+
    node.elements.each do |elem|
       text = nil
       if elem.name == "list" then
@@ -89,15 +101,10 @@ def getRuleConstraint(node, options={})
             operator = nil
          when ChildText
             constraintValue = elem.text
-         when DontCare
+         else
             next
       end
-      constraints << {
-         "name" => constraintName,
-         "value" => constraintValue,
-         "operator" => operator,
-         "parent" => options[:parent],
-      }
+      constraints << addConstraint(constraintName, :value=>constraintValue, :operator=>operator, :parent=>options[:parent])
    end
    constraints
 end
