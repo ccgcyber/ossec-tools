@@ -54,6 +54,37 @@ class NinjaDirectedAdjacencyGraph < RGL::DirectedAdjacencyGraph
    end
 end
 
+def getGroupsFromFile(filename)
+   if block_given?
+      doc = ""
+      yieldDoc = ""
+      fd = open(filename)
+      gStart = gEnd = false #group tag
+      cStart = cEnd = false #comment tag
+      fd.readlines.each do |line|
+         gStart = true if line.match(/^<group.*>$/)
+         gEnd = true if line.match(/^<\/group>/)
+         cStart = true if line.match(/\s*<!--/)
+         cEnd = true if line.match(/\s*-->/)
+         cStart = false if cEnd
+
+         if gStart and not cStart
+            doc += line
+         end 
+         if gStart and gEnd
+            gStart = gEnd = cStart = cEnd = false
+            yieldDoc = doc 
+            doc = ""
+            yield yieldDoc
+         end 
+      end 
+   end 
+end
+
+def printError(msg)
+   $stderr.write("[Error]: #{msg}\n")
+end
+
 def outputConstraints(constraints, fd)
    constraints.sort.to_a.each do |rule, constraints|
       fd.write("Rule: #{rule}\n")
@@ -79,6 +110,7 @@ end
 def getRuleConstraint(node, options={})
    constraints = []
 
+   raise Exception if not node
    node.attributes.each do |attr, value|
       if FrequencyConstraints.include?(attr) then
          constraints << addConstraint(attr, :value=>value, :operator=>'=')
@@ -111,43 +143,51 @@ end
 def getConstraints(graph, graphNodes)
    constraints = {}
    graph.to_a.each do |rule|
+      #0 is the psuedo parent of all rules. It has no constraints or parents.
       next if rule == 0
       constraints[rule] = []
-      #Add constraints from all parents
-      graph.all_parent_vertices(rule).each do |parent|
-         constraints[rule] += getRuleConstraint(graphNodes[parent], :parent=>parent)
+      begin
+         #Add constraints from all parents
+         graph.all_parent_vertices(rule).each do |parent|
+            constraints[rule] += getRuleConstraint(graphNodes[parent], :parent=>parent)
+         end
+         #Add constraints from this rule
+         constraints[rule] += getRuleConstraint(graphNodes[rule])
+      rescue Exception
+         printError("Rule node not found within specified rule files: #{rule}")
       end
-      #Add constraints from this rule
-      constraints[rule] += getRuleConstraint(graphNodes[rule])
    end
    constraints
 end
 
-def getGraph(filenames)
+def getGraph(filenames, options={})
    rules = []
    graph = NinjaDirectedAdjacencyGraph.new
    graphNodes = {}
    #Iterate over all rule files
    filenames.each do |f|
-      doc = REXML::Document.new(open(f))
-      rules += doc.elements.to_a('group/rule').collect{ |x| x.attributes['id'] }
-      #Iterate over all rules in this file
-      rules.each do |rule|
-         doc.elements.to_a("group/rule[@id='#{rule}']").collect{ |x|
-            #If the rule has a parent rule
-            if x.elements['if_sid'] then
-               sid = x.elements['if_sid'].text.to_i
-            #If the rule has a previously matched parent rule
-            elsif x.elements['if_matched_sid'] then
-               sid = x.elements['if_matched_sid'].text.to_i
-            #If the rule has no parent rule, make its parent 0
-            else
-               sid = 0
-            end
-            graphNodes[rule.to_i] = x
-            graph.add_edge(sid, rule.to_i)
+      puts f if options[:verbose]
+      getGroupsFromFile(f) do |groupDoc|
+         doc = REXML::Document.new(groupDoc)
+         rules = doc.elements.to_a('group/rule').collect{ |x| x.attributes['id'] }
+         #Iterate over all rules in this file
+         rules.each do |rule|
+            doc.elements.to_a("group/rule[@id='#{rule}']").collect{ |x|
+               #If the rule has a parent rule
+               if x.elements['if_sid'] then
+                  sid = x.elements['if_sid'].text.to_i
+               #If the rule has a previously matched parent rule
+               elsif x.elements['if_matched_sid'] then
+                  sid = x.elements['if_matched_sid'].text.to_i
+               #If the rule has no parent rule, make its parent 0
+               else
+                  sid = 0
+               end
+               graphNodes[rule.to_i] = x
+               graph.add_edge(sid, rule.to_i)
 #            graph.add_edge(rule.to_i, sid) #Swap this line with the previous line to invert graph direction
-         }
+            }
+         end
       end
    end
    [graph, graphNodes]
@@ -209,7 +249,7 @@ if __FILE__ == $0 then
       options[:inputFilenames] = ARGV
    end
 
-   graph, graphNodes = getGraph(options[:inputFilenames])
+   graph, graphNodes = getGraph(options[:inputFilenames], options=options)
    if options[:writeGraphic] then
       require 'rgl/dot'
       graphic = writeGraphic(graph, format=options[:graphFormat], dotfile=options[:graphFilename]) if options[:writeGraphic]
