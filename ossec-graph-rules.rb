@@ -65,14 +65,13 @@ def getGroupsFromFile(filename)
          gStart = true if line.match(/^<group.*>$/)
          gEnd = true if line.match(/^<\/group>/)
          cStart = true if line.match(/\s*<!--/)
-         cEnd = true if line.match(/\s*-->/)
-         cStart = false if cEnd
+         cStart = false if line.match(/\s*-->/)
 
          if gStart and not cStart
             doc += line
          end 
          if gStart and gEnd
-            gStart = gEnd = cStart = cEnd = false
+            gStart = gEnd = cStart = false
             yieldDoc = doc 
             doc = ""
             yield yieldDoc
