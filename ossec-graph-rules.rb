@@ -24,12 +24,17 @@ Constraints = {
    "user" => ChildText,
    "decoded_as" => ChildText,
    "extra_data" => ChildText,
-   "list" => ChildText
+   "list" => ChildText,
+   "description" => ChildText,
 }
 FrequencyConstraints = {
    "frequency" => nil,
    "timeframe" => nil,
 }
+
+ExcludeParentConstraints = [
+   "description",
+]
 
 class NinjaDirectedAdjacencyGraph < RGL::DirectedAdjacencyGraph
    def parent_vertex(vertex)
@@ -134,7 +139,7 @@ def getRuleConstraint(node, options={})
          else
             next
       end
-      constraints << addConstraint(constraintName, :value=>constraintValue, :operator=>operator, :parent=>options[:parent])
+      constraints << addConstraint(constraintName, :value=>constraintValue, :operator=>operator, :parent=>options[:parent]) unless options[:parent] and ExcludeParentConstraints.include?(constraintName)
    end
    constraints
 end
